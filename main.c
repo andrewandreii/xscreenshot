@@ -1,13 +1,3 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-/* #include <X11/Xlib.h> */ // already incldued by Xutil.h
-#include <X11/cursorfont.h>
-#include <X11/Xutil.h>
-
-#include <png.h>
-
 #include "main.h"
 
 /*
