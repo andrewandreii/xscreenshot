@@ -86,6 +86,7 @@ main (int argc, char *argv[]) {
 
 			Cursor cur = XCreateFontCursor(dpy, XC_tcross);
 			XDefineCursor(dpy, win, cur);
+			XFreeCursor(dpy, cur);
 
 			XSelectInput(dpy, win, KeyPressMask | ButtonPressMask | StructureNotifyMask);
 
