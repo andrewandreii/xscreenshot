@@ -110,6 +110,8 @@ main (int argc, char *argv[]) {
 					x = ev.xbutton.x;
 					y = ev.xbutton.y;
 					if (first) {
+						rect.width -= x - rect.x;
+						rect.height -= y - rect.y;
 						rect.x = x;
 						rect.y = y;
 						first = 0;
