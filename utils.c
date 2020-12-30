@@ -50,3 +50,11 @@ ximage_inherit_masks (XImage *i1, XImage *i2) {
 	i1->green_mask = i2->green_mask;
 	i1->blue_mask = i2->blue_mask;
 }
+
+int
+abs (int a) {
+	if (a < 0) {
+		return -a;
+	}
+	return a;
+}

@@ -7,6 +7,13 @@ typedef struct {
 	png_infop info_ptr;
 } png_context_t;
 
+#define rect_width(r) ((r).x2 - (r).x1)
+#define rect_height(r) ((r).y2 - (r).y1)
+
+typedef struct {
+	int x1, y1, x2, y2;
+} rect_t;
+
 // creates png_ptr and info_ptr
 // also checks if the values are NULL
 png_context_t *make_png_context(void);

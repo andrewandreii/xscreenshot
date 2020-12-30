@@ -103,7 +103,7 @@ main (int argc, char *argv[]) {
 
 			img = XSubImage(preimg, \
 					rect.x1, rect.y1, \
-					rect_width(rect), rect_height(rect) \
+					abs(rect_width(rect)), abs(rect_height(rect)) \
 				);
 
 			if (argc == 3) {
