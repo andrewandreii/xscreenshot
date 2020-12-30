@@ -17,9 +17,11 @@
 #define printe(message) fprintf(stderr, message); exit(ERROR)
 #define checknull(var, message) if (var == NULL) { printe(message); }
 
+#define rect_width(r) ((r).x2 - (r).x1)
+#define rect_height(r) ((r).y2 - (r).y1)
+
 typedef struct {
-	int x, y;
-	int width, height;
+	int x1, y1, x2, y2;
 } rect_t;
 
 

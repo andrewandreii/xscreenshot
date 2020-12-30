@@ -22,7 +22,7 @@ void
 interactive (Display *dpy, Window root, XImage *img, rect_t *rect) {
 	printf("Interactive mode\n");
 
-	Window win = XCreateSimpleWindow(dpy, root, 0, 0, rect->width, rect->height, 0, 1, 1);
+	Window win = XCreateSimpleWindow(dpy, root, 0, 0, rect_width(*rect), rect_height(*rect), 0, 1, 1);
 
 	GC gc = XCreateGC(dpy, win, 0, NULL);
 
@@ -43,7 +43,7 @@ interactive (Display *dpy, Window root, XImage *img, rect_t *rect) {
 
 	// TODO: try to fullscreen the window and if it doesn't work
 	// downscale the image
-	XPutImage(dpy, win, gc, img, 0, 0, 0, 0, rect->width, rect->height);
+	XPutImage(dpy, win, gc, img, 0, 0, 0, 0, rect_width(*rect), rect_height(*rect));
 
 	int first = 1, x, y;
 	for (;;) {
@@ -52,21 +52,12 @@ interactive (Display *dpy, Window root, XImage *img, rect_t *rect) {
 			x = ev.xbutton.x;
 			y = ev.xbutton.y;
 			if (first) {
-				rect->width -= x - rect->x;
-				rect->height -= y - rect->y;
-				rect->x = x;
-				rect->y = y;
+				rect->x1 = x;
+				rect->y1 = y;
 				first = 0;
 			} else {
-				rect->width = x - rect->x;
-				rect->height = y - rect->y;
-				// swap x and y with width and height
-				if (rect->width < 0 || rect->height < 0) {
-					rect->width = rect->x - x;
-					rect->height = rect->y - y;
-					rect->x = x;
-					rect->y = y;
-				}
+				rect->x2 = x;
+				rect->y2 = y;
 				first = 1;
 			}
 		} else if (ev.type == KeyPress) {
@@ -86,12 +77,12 @@ main (int argc, char *argv[]) {
 
 	// default values
 	rect_t rect;
-	rect.x = rect.y = 0;
-	rect.width = XDisplayWidth(dpy, screen);
-	rect.height = XDisplayHeight(dpy, screen);
+	rect.x1 = rect.y1 = 0;
+	rect.x2 = XDisplayWidth(dpy, screen);
+	rect.y2 = XDisplayHeight(dpy, screen);
 	char *filename = DEFAULT_FILENAME;
 
-	XImage *preimg = XGetImage(dpy, root, 0, 0, rect.width, rect.height, AllPlanes, ZPixmap);
+	XImage *preimg = XGetImage(dpy, root, 0, 0, rect_width(rect), rect_height(rect), AllPlanes, ZPixmap);
 	checknull(preimg, "Cannot get image from window");
 
 	// TODO: rewrite the argument parsing
@@ -111,8 +102,8 @@ main (int argc, char *argv[]) {
 			interactive(dpy, root, preimg, &rect);
 
 			img = XSubImage(preimg, \
-					rect.x, rect.y, \
-					rect.width, rect.height \
+					rect.x1, rect.y1, \
+					rect_width(rect), rect_height(rect) \
 				);
 
 			if (argc == 3) {
