@@ -17,4 +17,7 @@
 #define printe(message) fprintf(stderr, message); exit(ERROR)
 #define checknull(var, message) if (var == NULL) { printe(message); }
 
+// its better if this file doesn't include utils.h, since utils.h includes main.h
+/* void interactive(Display *dpy, Window root, XImage *img, rect_t *rect); */
+
 #endif

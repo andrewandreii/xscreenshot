@@ -19,21 +19,31 @@
  */
 
 void
-interactive (Display *dpy, Window root, XImage *img, rect_t *rect) {
+interactive (Display *dpy, Window root, int screen, XImage *img, rect_t *rect) {
 	printf("Interactive mode\n");
 
-	Window win = XCreateSimpleWindow(dpy, root, 0, 0, rect_width(*rect), rect_height(*rect), 0, 1, 1);
+	XSetWindowAttributes attr;
+	attr.override_redirect = True;
+	attr.background_pixmap = ParentRelative;
+
+	Window win = XCreateWindow(dpy, root, 0, 0, \
+			rect_width(*rect), rect_height(*rect), \
+			0, DefaultDepth(dpy, screen), CopyFromParent, \
+			DefaultVisual(dpy, screen), \
+			CWOverrideRedirect | CWBackPixmap, &attr \
+		);
 
 	GC gc = XCreateGC(dpy, win, 0, NULL);
 
 	Cursor cur = XCreateFontCursor(dpy, XC_tcross);
-	XDefineCursor(dpy, win, cur);
-	XFreeCursor(dpy, cur);
 
 	XSelectInput(dpy, win, KeyPressMask | ButtonPressMask | StructureNotifyMask);
 
+	XGrabKeyboard(dpy, root, True, GrabModeAsync, GrabModeAsync, CurrentTime);
+	XGrabPointer(dpy, root, True, ButtonPressMask, GrabModeAsync, GrabModeAsync, None, cur, CurrentTime);
+
 	XEvent ev;
-	XMapWindow(dpy, win);
+	XMapRaised(dpy, win);
 	for (;;) {
 		XNextEvent(dpy, &ev);
 		if (ev.type == MapNotify) {
@@ -41,8 +51,6 @@ interactive (Display *dpy, Window root, XImage *img, rect_t *rect) {
 		}
 	}
 
-	// TODO: try to fullscreen the window and if it doesn't work
-	// downscale the image
 	XPutImage(dpy, win, gc, img, 0, 0, 0, 0, rect_width(*rect), rect_height(*rect));
 
 	int first = 1, x, y;
@@ -65,6 +73,7 @@ interactive (Display *dpy, Window root, XImage *img, rect_t *rect) {
 		}
 	}
 
+	XFreeCursor(dpy, cur);
 	XDestroyWindow(dpy, win);
 	XFreeGC(dpy, gc);
 }
@@ -99,7 +108,7 @@ main (int argc, char *argv[]) {
 
 	} else if (argc == 2 || argc == 3) {
 		if (strcmp(argv[1], "i") == 0) {
-			interactive(dpy, root, preimg, &rect);
+			interactive(dpy, root, screen, preimg, &rect);
 
 			img = XSubImage(preimg, \
 					rect.x1, rect.y1, \
