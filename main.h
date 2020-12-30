@@ -22,9 +22,7 @@ typedef struct {
 	int width, height;
 } rect_t;
 
-// creates png_ptr and info_ptr
-// also checks if the values are NULL
-void make_png(png_structp *png_ptr, png_infop *info_ptr);
+
 
 // save the portion defined by rect from the image img in the file f
 void write_ximage_to_file( \
