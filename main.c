@@ -92,7 +92,7 @@ main (int argc, char *argv[]) {
 	char *filename = DEFAULT_FILENAME;
 
 	XImage *preimg = XGetImage(dpy, root, 0, 0, rect.width, rect.height, AllPlanes, ZPixmap);
-	check(preimg, "Cannot get image from window");
+	checknull(preimg, "Cannot get image from window");
 
 	// TODO: rewrite the argument parsing
 	XImage *img; // final image
@@ -124,9 +124,8 @@ main (int argc, char *argv[]) {
 		}
 	} else {
 		img = XSubImage(preimg, 0, 0, preimg->width, preimg->height);
-		interactive(dpy, root, img, &rect);
 	}
-	printf("Reactangle: (%d %d %d)\n", img->width, img->height);
+	printf("Reactangle: (%d %d)\n", img->width, img->height);
 
 	ximage_inherit_masks(img, preimg); // thanks xlib
 
@@ -136,7 +135,7 @@ main (int argc, char *argv[]) {
 
 	// write to file
 	FILE *f = fopen(filename, "wb");
-	check(f, "Cannot open file in wb mode");
+	checknull(f, "Cannot open file in wb mode");
 
 	png_write_to_file(img, f, ctx);
 

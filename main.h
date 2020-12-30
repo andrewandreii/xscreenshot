@@ -15,7 +15,7 @@
 #define SUCCESS 0
 #define ERROR 1
 #define printe(message) fprintf(stderr, message); exit(ERROR)
-#define check(var, message) if (var == NULL) { printe(message); }
+#define checknull(var, message) if (var == NULL) { printe(message); }
 
 typedef struct {
 	int x, y;

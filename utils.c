@@ -4,10 +4,10 @@ png_context_t *
 make_png_context (void) {
 	png_context_t *ctx = malloc(sizeof(png_context_t));
 	ctx->png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
-	check(ctx->png_ptr, "Cannot create the png struct");
+	checknull(ctx->png_ptr, "Cannot create the png struct");
 
 	ctx->info_ptr = png_create_info_struct(ctx->png_ptr);
-	check(ctx->info_ptr, "Cannot create the info struct");
+	checknull(ctx->info_ptr, "Cannot create the info struct");
 
 	return ctx;
 }
