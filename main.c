@@ -3,7 +3,7 @@
 
 /*
  * Usage:
- *		./a.out [-i|-g x1 y1 x2 y2] [filename]
+ *		./a.out [options] [-i|-g x1 y1 x2 y2|-w] [filename]
  *
  *		-i
  *			interactive mode, let's you choose the
@@ -12,6 +12,17 @@
  *		-g x1 y1 x2 y2
  *			screenshots the rectangle define by the points
  *			(x1, y1) and (x2 y2)
+ *
+ *		-w
+ *			let's you choose a window in interactive mode
+ *			instead of an area
+ *
+ *		options:
+ *			currently only -w has options
+ *
+ *			--with-border (not yet tested)
+ *				captures a screenshot of a window along with
+ *				its border
  *
  *		you can put an optional -- before the file if you want
  *		to name it -i or -g for some reason
@@ -51,12 +62,54 @@ interactive (Display *dpy, Window root, int screen, XImage **img, rect_t rect) {
 		}
 	}
 
+	XUngrabPointer(dpy, CurrentTime);
+	XUngrabKeyboard(dpy, CurrentTime);
+
 	XFreeCursor(dpy, cur);
 
 	*img = XGetImage(dpy, root, rect.x1, rect.y1, \
 			abs(rect_width(rect)), abs(rect_height(rect)), \
 			AllPlanes, ZPixmap \
 		);
+}
+
+void
+select_window (Display *dpy, Window root, XImage **img, Bool border) {
+	printf("Window selection\n");
+
+	Cursor cur = XCreateFontCursor(dpy, XC_tcross);
+
+	XGrabPointer(dpy, root, True, ButtonPressMask, GrabModeAsync, GrabModeAsync, None, cur, CurrentTime);
+
+	XEvent ev;
+	Window win;
+
+	for (;;) {
+		XNextEvent(dpy, &ev);
+		if (ev.type == ButtonPress) {
+			win = ev.xbutton.subwindow;
+			break;
+		}
+	}
+
+	Window root_window;
+	int x, y;
+	uint width, height, border_width, depth;
+	XGetGeometry(dpy, win, &root_window, &x, &y, &width, &height, &border_width, &depth);
+
+	if (border == True) {
+		*img = XGetImage(dpy, root, \
+				x - border_width, y - border_width, \
+				width, height, \
+				AllPlanes, ZPixmap \
+			);
+	} else {
+		*img = XGetImage(dpy, win, 0, 0, width, height, AllPlanes, ZPixmap);
+	}
+
+	XUngrabPointer(dpy, CurrentTime);
+
+	XFreeCursor(dpy, cur);
 }
 
 int
@@ -73,8 +126,10 @@ main (int argc, char *argv[]) {
 	char *filename = DEFAULT_FILENAME;
 
 	XImage *img = NULL;
+	Bool border = False;
 	int i;
-	for (i = 0; i < argc; ++ i) {
+	for (i = 1; i < argc; ++ i) {
+		printf("arg: %s\n", argv[i]);
 		if (strcmp(argv[i], "-g") == 0) {
 			if (i + 4 >= argc) {
 				printe("Too little arguments for flag -g");
@@ -87,12 +142,22 @@ main (int argc, char *argv[]) {
 					atoi(argv[i + 3]), atoi(argv[i + 4]), \
 					AllPlanes, ZPixmap \
 				);
+
+			i += 4;
 		} else if (strcmp(argv[i], "-i") == 0) {
 			if (img != NULL) {
 				printe("Screenshot already took, -i shouldn't be used");
 			}
 
 			interactive(dpy, root, screen, &img, rect);
+		} else if (strcmp(argv[i], "-w") == 0) {
+			if (img != NULL) {
+				printe("Screenshot already took, -w shouldn't be used");
+			}
+
+			select_window(dpy, root, &img, border);
+		} else if (strcmp(argv[i], "--with-border") == 0) {
+			border = True;
 		} else if (i + 1 >= argc) {
 			filename = argv[i];
 		} else if (strcmp(argv[i], "--") == 0) {
