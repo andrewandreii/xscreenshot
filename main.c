@@ -3,16 +3,18 @@
 
 /*
  * Usage:
- *		prog xoffset yoffset width height [filename]
- *			- takes a screenshot of the specified area
- *		prog i [filename]
- *			- opens the screenshot before saving and lets you
- *			  select the area you want to save
- *			- in interactive mode you can exit by pressing any key,
- *			  it will keep updating the coordinates when you click
- *			  (ie. it swaps between updating x1 y1 to x2 y2 with every click)
- *		prog [filename]
- *			- save the full screenshot
+ *		./a.out [-i|-g x1 y1 x2 y2] [filename]
+ *
+ *		-i
+ *			interactive mode, let's you choose the
+ *			area you want to screenshot
+ *
+ *		-g x1 y1 x2 y2
+ *			screenshots the rectangle define by the points
+ *			(x1, y1) and (x2 y2)
+ *
+ *		you can put an optional -- before the file if you want
+ *		to name it -i or -g for some reason
  *
  *		if the filename is specified it saves it there,
  *		else it saves it in the DEFAULT_FILENAME file
@@ -70,40 +72,48 @@ main (int argc, char *argv[]) {
 	rect.y2 = XDisplayHeight(dpy, screen);
 	char *filename = DEFAULT_FILENAME;
 
-	// TODO: rewrite the argument parsing
-	XImage *img; // final image
-	if (argc >= 5) {
-		img = XGetImage(dpy, root, \
-				atoi(argv[1]), atoi(argv[2]), \
-				atoi(argv[3]), atoi(argv[4]), \
-				AllPlanes, ZPixmap \
-			);
-
-		if (argc > 5) {
-			filename = argv[5];
-		}
-
-	} else if (argc == 2 || argc == 3) {
-		if (strcmp(argv[1], "i") == 0) {
-			interactive(dpy, root, screen, &img, rect);
-
-			if (argc == 3) {
-				filename = argv[2];
+	XImage *img = NULL;
+	int i;
+	for (i = 0; i < argc; ++ i) {
+		if (strcmp(argv[i], "-g") == 0) {
+			if (i + 4 >= argc) {
+				printe("Too little arguments for flag -g");
+			} else if (img != NULL) {
+				printe("Screenshot already took, -g shouldn't be used");
 			}
-		} else {
-			filename = argv[1];
 
-			img = XGetImage(dpy, root, 0, 0, \
-					rect_width(rect), rect_height(rect), \
+			img = XGetImage(dpy, root, \
+					atoi(argv[i + 1]), atoi(argv[i + 2]), \
+					atoi(argv[i + 3]), atoi(argv[i + 4]), \
 					AllPlanes, ZPixmap \
 				);
+		} else if (strcmp(argv[i], "-i") == 0) {
+			if (img != NULL) {
+				printe("Screenshot already took, -i shouldn't be used");
+			}
+
+			interactive(dpy, root, screen, &img, rect);
+		} else if (i + 1 >= argc) {
+			filename = argv[i];
+		} else if (strcmp(argv[i], "--") == 0) {
+			if (i + 2 < argc) {
+				printe("Too many arguments after '--'");
+			}
+			filename = argv[i + 1];
+			break;
+		} else {
+			printe("Unknown argument");
 		}
-	} else {
-		img = XGetImage(dpy, root, 0, 0, \
-				rect_width(rect), rect_height(rect), \
+	}
+
+	if (img == NULL) {
+		img = XGetImage(dpy, root, \
+				rect.x1, rect.y1, \
+				rect_width(rect), rect_height(rect),
 				AllPlanes, ZPixmap \
 			);
 	}
+
 	checknull(img, "Unable to take screenshot");
 	printf("Reactangle: (%d %d)\n", img->width, img->height);
 
