@@ -32,7 +32,7 @@
  */
 
 void
-interactive (Display *dpy, Window root, int screen, XImage **img, rect_t rect) {
+interactive (Display *dpy, Window root, XImage **img, rect_t rect) {
 	printf("Interactive mode\n");
 
 	Cursor cur = XCreateFontCursor(dpy, XC_tcross);
@@ -149,7 +149,7 @@ main (int argc, char *argv[]) {
 				printe("Screenshot already took, -i shouldn't be used");
 			}
 
-			interactive(dpy, root, screen, &img, rect);
+			interactive(dpy, root, &img, rect);
 		} else if (strcmp(argv[i], "-w") == 0) {
 			if (img != NULL) {
 				printe("Screenshot already took, -w shouldn't be used");
