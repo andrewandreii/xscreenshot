@@ -19,39 +19,15 @@
  */
 
 void
-interactive (Display *dpy, Window root, int screen, XImage *img, rect_t *rect) {
+interactive (Display *dpy, Window root, int screen, XImage **img, rect_t rect) {
 	printf("Interactive mode\n");
 
-	XSetWindowAttributes attr;
-	attr.override_redirect = True;
-	attr.background_pixmap = ParentRelative;
-
-	Window win = XCreateWindow(dpy, root, 0, 0, \
-			rect_width(*rect), rect_height(*rect), \
-			0, DefaultDepth(dpy, screen), CopyFromParent, \
-			DefaultVisual(dpy, screen), \
-			CWOverrideRedirect | CWBackPixmap, &attr \
-		);
-
-	GC gc = XCreateGC(dpy, win, 0, NULL);
-
 	Cursor cur = XCreateFontCursor(dpy, XC_tcross);
-
-	XSelectInput(dpy, win, KeyPressMask | ButtonPressMask | StructureNotifyMask);
 
 	XGrabKeyboard(dpy, root, True, GrabModeAsync, GrabModeAsync, CurrentTime);
 	XGrabPointer(dpy, root, True, ButtonPressMask, GrabModeAsync, GrabModeAsync, None, cur, CurrentTime);
 
 	XEvent ev;
-	XMapRaised(dpy, win);
-	for (;;) {
-		XNextEvent(dpy, &ev);
-		if (ev.type == MapNotify) {
-			break;
-		}
-	}
-
-	XPutImage(dpy, win, gc, img, 0, 0, 0, 0, rect_width(*rect), rect_height(*rect));
 
 	int first = 1, x, y;
 	for (;;) {
@@ -60,12 +36,12 @@ interactive (Display *dpy, Window root, int screen, XImage *img, rect_t *rect) {
 			x = ev.xbutton.x;
 			y = ev.xbutton.y;
 			if (first) {
-				rect->x1 = x;
-				rect->y1 = y;
+				rect.x1 = x;
+				rect.y1 = y;
 				first = 0;
 			} else {
-				rect->x2 = x;
-				rect->y2 = y;
+				rect.x2 = x;
+				rect.y2 = y;
 				first = 1;
 			}
 		} else if (ev.type == KeyPress) {
@@ -74,8 +50,11 @@ interactive (Display *dpy, Window root, int screen, XImage *img, rect_t *rect) {
 	}
 
 	XFreeCursor(dpy, cur);
-	XDestroyWindow(dpy, win);
-	XFreeGC(dpy, gc);
+
+	*img = XGetImage(dpy, root, rect.x1, rect.y1, \
+			abs(rect_width(rect)), abs(rect_height(rect)), \
+			AllPlanes, ZPixmap \
+		);
 }
 
 int
@@ -108,12 +87,7 @@ main (int argc, char *argv[]) {
 
 	} else if (argc == 2 || argc == 3) {
 		if (strcmp(argv[1], "i") == 0) {
-			interactive(dpy, root, screen, preimg, &rect);
-
-			img = XSubImage(preimg, \
-					rect.x1, rect.y1, \
-					abs(rect_width(rect)), abs(rect_height(rect)) \
-				);
+			interactive(dpy, root, screen, &img, rect);
 
 			if (argc == 3) {
 				filename = argv[2];
