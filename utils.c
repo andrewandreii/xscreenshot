@@ -43,14 +43,6 @@ png_context_free (png_context_t *ctx) {
 	png_destroy_write_struct(&(ctx->png_ptr), &(ctx->info_ptr));
 }
 
-// because apparently xlib doesnt bother to do that
-void
-ximage_inherit_masks (XImage *i1, XImage *i2) {
-	i1->red_mask = i2->red_mask;
-	i1->green_mask = i2->green_mask;
-	i1->blue_mask = i2->blue_mask;
-}
-
 int
 abs (int a) {
 	if (a < 0) {

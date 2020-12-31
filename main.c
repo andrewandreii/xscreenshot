@@ -70,15 +70,13 @@ main (int argc, char *argv[]) {
 	rect.y2 = XDisplayHeight(dpy, screen);
 	char *filename = DEFAULT_FILENAME;
 
-	XImage *preimg = XGetImage(dpy, root, 0, 0, rect_width(rect), rect_height(rect), AllPlanes, ZPixmap);
-	checknull(preimg, "Cannot get image from window");
-
 	// TODO: rewrite the argument parsing
 	XImage *img; // final image
 	if (argc >= 5) {
-		img = XSubImage(preimg, \
+		img = XGetImage(dpy, root, \
 				atoi(argv[1]), atoi(argv[2]), \
-				atoi(argv[3]), atoi(argv[4]) \
+				atoi(argv[3]), atoi(argv[4]), \
+				AllPlanes, ZPixmap \
 			);
 
 		if (argc > 5) {
@@ -94,16 +92,20 @@ main (int argc, char *argv[]) {
 			}
 		} else {
 			filename = argv[1];
-			img = XSubImage(preimg, 0, 0, preimg->width, preimg->height);
+
+			img = XGetImage(dpy, root, 0, 0, \
+					rect_width(rect), rect_height(rect), \
+					AllPlanes, ZPixmap \
+				);
 		}
 	} else {
-		img = XSubImage(preimg, 0, 0, preimg->width, preimg->height);
+		img = XGetImage(dpy, root, 0, 0, \
+				rect_width(rect), rect_height(rect), \
+				AllPlanes, ZPixmap \
+			);
 	}
+	checknull(img, "Unable to take screenshot");
 	printf("Reactangle: (%d %d)\n", img->width, img->height);
-
-	ximage_inherit_masks(img, preimg); // thanks xlib
-
-	XDestroyImage(preimg);
 
 	png_context_t *ctx = make_png_context();
 
