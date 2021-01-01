@@ -1,6 +1,14 @@
 #include "main.h"
 #include "utils.h"
 
+/* to do list:
+ *
+ *	TODO: add screen recording (-r)
+ *	INFO: -r will be an options that
+ *		  works with -i, -g and -w
+ *
+ */
+
 /*
  * Usage:
  *		./a.out [options] [-i|-g x1 y1 x2 y2|-w] [filename]
@@ -20,7 +28,7 @@
  *		options:
  *			currently only -w has options
  *
- *			--with-border (not yet tested)
+ *			--with-border
  *				captures a screenshot of a window along with
  *				its border
  *
@@ -99,8 +107,8 @@ select_window (Display *dpy, Window root, XImage **img, Bool border) {
 
 	if (border == True) {
 		*img = XGetImage(dpy, root, \
-				x - border_width, y - border_width, \
-				width, height, \
+				x, y, \
+				width + border_width * 2, height + border_width * 2, \
 				AllPlanes, ZPixmap \
 			);
 	} else {
