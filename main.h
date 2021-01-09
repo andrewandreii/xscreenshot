@@ -14,8 +14,8 @@
 #define DEFAULT_FILENAME "test.png"
 #define SUCCESS 0
 #define ERROR 1
-#define printe(message) fprintf(stderr, message); exit(ERROR)
-#define checknull(var, message) if (var == NULL) { printe(message); }
+#define printe(message, ...) fprintf(stderr, message, ##__VA_ARGS__); exit(ERROR)
+#define checknull(var, message, ...) if (var == NULL) { printe(message, ##__VA_ARGS__); }
 
 // its better if this file doesn't include utils.h, since utils.h includes main.h
 /* void interactive(Display *dpy, Window root, XImage *img, rect_t *rect); */

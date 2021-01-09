@@ -26,11 +26,12 @@
  *			instead of an area
  *
  *		options:
- *			currently only -w has options
- *
  *			--with-border
  *				captures a screenshot of a window along with
  *				its border
+ *			--record (-r) !! NOT IMPLEMENTED YET
+ *				records the portion of the screen specified by
+ *				-i, -g or -w
  *
  *		you can put an optional -- before the file if you want
  *		to name it -i or -g for some reason
@@ -40,29 +41,29 @@
  */
 
 void
-interactive (Display *dpy, Window root, XImage **img, rect_t rect) {
+interactive (x_conn_t *conn, rect_t *rect) {
 	printf("Interactive mode\n");
 
-	Cursor cur = XCreateFontCursor(dpy, XC_tcross);
+	Cursor cur = XCreateFontCursor(conn->dpy, XC_tcross);
 
-	XGrabKeyboard(dpy, root, True, GrabModeAsync, GrabModeAsync, CurrentTime);
-	XGrabPointer(dpy, root, True, ButtonPressMask, GrabModeAsync, GrabModeAsync, None, cur, CurrentTime);
+	XGrabKeyboard(conn->dpy, conn->win, True, GrabModeAsync, GrabModeAsync, CurrentTime);
+	XGrabPointer(conn->dpy, conn->win, True, ButtonPressMask, GrabModeAsync, GrabModeAsync, None, cur, CurrentTime);
 
 	XEvent ev;
 
 	int first = 1, x, y;
 	for (;;) {
-		XNextEvent(dpy, &ev);
+		XNextEvent(conn->dpy, &ev);
 		if (ev.type == ButtonPress) {
 			x = ev.xbutton.x;
 			y = ev.xbutton.y;
 			if (first) {
-				rect.x1 = x;
-				rect.y1 = y;
+				rect->x1 = x;
+				rect->y1 = y;
 				first = 0;
 			} else {
-				rect.x2 = x;
-				rect.y2 = y;
+				rect->x2 = x;
+				rect->y2 = y;
 				first = 1;
 			}
 		} else if (ev.type == KeyPress) {
@@ -70,102 +71,115 @@ interactive (Display *dpy, Window root, XImage **img, rect_t rect) {
 		}
 	}
 
-	XUngrabPointer(dpy, CurrentTime);
-	XUngrabKeyboard(dpy, CurrentTime);
+	XUngrabPointer(conn->dpy, CurrentTime);
+	XUngrabKeyboard(conn->dpy, CurrentTime);
 
-	XFreeCursor(dpy, cur);
+	XFreeCursor(conn->dpy, cur);
 
-	*img = XGetImage(dpy, root, rect.x1, rect.y1, \
-			abs(rect_width(rect)), abs(rect_height(rect)), \
-			AllPlanes, ZPixmap \
-		);
+	int tmp;
+	if (rect_width(*rect) < 0) {
+		tmp = rect->x1;
+		rect->x1 = rect->x2;
+		rect->x2 = tmp;
+	}
+	if (rect_height(*rect) < 0) {
+		tmp = rect->y1;
+		rect->y1 = rect->y2;
+		rect->y2 = tmp;
+	}
 }
 
 void
-select_window (Display *dpy, Window root, XImage **img, Bool border) {
+select_window (x_conn_t *conn, rect_t *rect, Bool border) {
 	printf("Window selection\n");
 
-	Cursor cur = XCreateFontCursor(dpy, XC_tcross);
+	Cursor cur = XCreateFontCursor(conn->dpy, XC_tcross);
 
-	XGrabPointer(dpy, root, True, ButtonPressMask, GrabModeAsync, GrabModeAsync, None, cur, CurrentTime);
+	XGrabPointer(conn->dpy, conn->win, True, ButtonPressMask, GrabModeAsync, GrabModeAsync, None, cur, CurrentTime);
 
 	XEvent ev;
 	Window win;
 
 	for (;;) {
-		XNextEvent(dpy, &ev);
+		XNextEvent(conn->dpy, &ev);
 		if (ev.type == ButtonPress) {
 			win = ev.xbutton.subwindow;
 			break;
 		}
 	}
 
-	Window root_window;
+	Window window;
 	int x, y;
 	uint width, height, border_width, depth;
-	XGetGeometry(dpy, win, &root_window, &x, &y, &width, &height, &border_width, &depth);
+	XGetGeometry(conn->dpy, win, &window, &x, &y, &width, &height, &border_width, &depth);
 
 	if (border == True) {
-		*img = XGetImage(dpy, root, \
-				x, y, \
-				width + border_width * 2, height + border_width * 2, \
-				AllPlanes, ZPixmap \
-			);
+		rect->x1 = x;
+		rect->y1 = y;
+		rect->x2 = width + border_width * 2 + x;
+		rect->y2 = height + border_width * 2 + y;
 	} else {
-		*img = XGetImage(dpy, win, 0, 0, width, height, AllPlanes, ZPixmap);
+		rect->x1 = rect->y1 = 0;
+		rect->x2 = width;
+		rect->y2 = height;
+		conn->win = win;
 	}
 
-	XUngrabPointer(dpy, CurrentTime);
+	XUngrabPointer(conn->dpy, CurrentTime);
 
-	XFreeCursor(dpy, cur);
+	XFreeCursor(conn->dpy, cur);
+}
+
+void
+just_screenshot (x_conn_t *conn, char *filename) {
+	png_context_t *ctx = make_png_context();
+
+	// write to file
+	FILE *f = fopen(filename, "wb");
+	checknull(f, "Cannot open file in wb mode");
+
+	png_write_to_file(conn->img, f, ctx);
+
+	// cleanup
+	png_context_free(ctx);
+
+	fclose(f);
 }
 
 int
 main (int argc, char *argv[]) {
-	Display *dpy = XOpenDisplay(NULL);
-	Window root = DefaultRootWindow(dpy);
-	int screen = DefaultScreen(dpy);
+	x_conn_t *conn = make_x_conn(NULL, 0);
 
 	// default values
 	rect_t rect;
 	rect.x1 = rect.y1 = 0;
-	rect.x2 = XDisplayWidth(dpy, screen);
-	rect.y2 = XDisplayHeight(dpy, screen);
+	rect.x2 = XDisplayWidth(conn->dpy, conn->screen);
+	rect.y2 = XDisplayHeight(conn->dpy, conn->screen);
 	char *filename = DEFAULT_FILENAME;
 
-	XImage *img = NULL;
-	Bool border = False;
+	Bool border = False, record = False;
 	int i;
 	for (i = 1; i < argc; ++ i) {
 		printf("arg: %s\n", argv[i]);
 		if (strcmp(argv[i], "-g") == 0) {
 			if (i + 4 >= argc) {
 				printe("Too little arguments for flag -g");
-			} else if (img != NULL) {
-				printe("Screenshot already took, -g shouldn't be used");
 			}
 
-			img = XGetImage(dpy, root, \
-					atoi(argv[i + 1]), atoi(argv[i + 2]), \
-					atoi(argv[i + 3]), atoi(argv[i + 4]), \
-					AllPlanes, ZPixmap \
-				);
+			rect.x1 = atoi(argv[i + 1]);
+			rect.y1 = atoi(argv[i + 2]);
+			rect.x2 = atoi(argv[i + 3]) + rect.x1;
+			rect.y2 = atoi(argv[i + 4]) + rect.y1;
 
 			i += 4;
 		} else if (strcmp(argv[i], "-i") == 0) {
-			if (img != NULL) {
-				printe("Screenshot already took, -i shouldn't be used");
-			}
-
-			interactive(dpy, root, &img, rect);
+			interactive(conn, &rect);
 		} else if (strcmp(argv[i], "-w") == 0) {
-			if (img != NULL) {
-				printe("Screenshot already took, -w shouldn't be used");
-			}
-
-			select_window(dpy, root, &img, border);
+			select_window(conn, &rect, border);
 		} else if (strcmp(argv[i], "--with-border") == 0) {
 			border = True;
+		} else if (strcmp(argv[i], "--record") == 0 || strcmp(argv[i], "-r") == 0) {
+			record = True;
 		} else if (i + 1 >= argc) {
 			filename = argv[i];
 		} else if (strcmp(argv[i], "--") == 0) {
@@ -179,32 +193,18 @@ main (int argc, char *argv[]) {
 		}
 	}
 
-	if (img == NULL) {
-		img = XGetImage(dpy, root, \
-				rect.x1, rect.y1, \
-				rect_width(rect), rect_height(rect),
-				AllPlanes, ZPixmap \
-			);
+	printf("Rectangle: (%d %d %d %d)\nWindow: %ld", rect.x1, rect.y1, rect.x2, rect.y2, conn->win);
+
+	x_conn_init_ximage(conn, &rect);
+
+	if (record == True) {
+		x_conn_free(conn);
+		printe("Not yet implemented");
+	}else {
+		just_screenshot(conn, filename);
 	}
 
-	checknull(img, "Unable to take screenshot");
-	printf("Reactangle: (%d %d)\n", img->width, img->height);
-
-	png_context_t *ctx = make_png_context();
-
-	// write to file
-	FILE *f = fopen(filename, "wb");
-	checknull(f, "Cannot open file in wb mode");
-
-	png_write_to_file(img, f, ctx);
-
-	// cleanup
-	png_context_free(ctx);
-
-	fclose(f);
-
-	XDestroyImage(img);
-	XCloseDisplay(dpy);
+	x_conn_free(conn);
 
 	return SUCCESS;
 }
