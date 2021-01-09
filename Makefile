@@ -1,7 +1,8 @@
 exec = a.out
 sources = $(wildcard *.c)
 objects = $(sources:.c=.o)
-flags = -g -Wall -lX11 -lpng
+libs = -lX11 -lpng -lswscale -lavutil -lavcodec -lavformat
+flags = -g -Wall ${libs}
 
 $(exec): $(objects)
 	gcc $(objects) $(flags) -o $(exec)

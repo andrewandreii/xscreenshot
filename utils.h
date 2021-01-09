@@ -24,7 +24,6 @@ typedef struct {
 	int pix_fmt;
 } x_conn_t;
 
-// dont forget to initialize XImage here
 x_conn_t *make_x_conn(_Xconst char *dpy_name, Window win);
 void x_conn_init_ximage(x_conn_t *conn, rect_t *rect);
 #define capture_screenshot(conn) \
