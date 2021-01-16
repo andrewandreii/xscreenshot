@@ -3,6 +3,8 @@
 ### Libraries
 1. libX11
 2. libpng
+3. libav(format/util/codec)
+4. libswscale
 
 ### make commands
 `make` builds everything (the output file is a.out)
