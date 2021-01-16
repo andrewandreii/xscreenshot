@@ -1,10 +1,11 @@
-#include "utils.h"
+#include "definitions.h"
 
 x_conn_t *
 make_x_conn (_Xconst char *dpy_name, Window win) {
 	x_conn_t *conn = malloc(sizeof(x_conn_t));
 	conn->dpy = XOpenDisplay(dpy_name);
-	conn->win = win ? win : DefaultRootWindow(conn->dpy);
+	conn->root = DefaultRootWindow(conn->dpy);
+	conn->win = win ? win : conn->root;
 	conn->screen = DefaultScreen(conn->dpy);
 
 	conn->pix_fmt = AV_PIX_FMT_BGRA;

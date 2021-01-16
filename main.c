@@ -1,11 +1,14 @@
 #include "main.h"
-#include "utils.h"
+#include "definitions.h"
 
 /* to do list:
  *
- *	TODO: add screen recording (-r)
- *	INFO: -r will be an options that
- *		  works with -i, -g and -w
+ *	TODO: write a man page and move the comment below
+ *		  to a function which prints the usage
+ *	TODO: maybe move to xcb and make the program
+ *		  multithreaded
+ *	TODO: add --with-audio option, which is used with
+ *		  option -r (--record)
  *
  */
 
@@ -29,9 +32,21 @@
  *			--with-border
  *				captures a screenshot of a window along with
  *				its border
- *			--record (-r) !! NOT IMPLEMENTED YET
+ *
+ *			--record (-r)
  *				records the portion of the screen specified by
  *				-i, -g or -w
+ *
+ *				if used with -w (and without --with-border)
+ *				make sure the window is visible the whole
+ *				time you are recording, there is currently
+ *				no check so the program tries to take the
+ *				screenshot no matter what (ie. it crashes
+ *				when the window is no longer visible)
+ *
+ *				the default keybinding to exit recording mode
+ *				is Mod4 + Shift + x, it can be modified in the
+ *				function `just_record` (lines 176-177)
  *
  *		you can put an optional -- before the file if you want
  *		to name it -i or -g for some reason
@@ -146,6 +161,43 @@ just_screenshot (x_conn_t *conn, char *filename) {
 	fclose(f);
 }
 
+void
+just_record (x_conn_t *conn, char *filename) {
+	// allocate an output stream
+	ost_t *ost = make_ost(filename);
+	ost_add_video_stream(ost, conn->img->width, conn->img->height);
+	ost_init_io(ost);
+
+	// color conversion
+	struct SwsContext *sws_ctx = sws_getContext( \
+			conn->img->width, conn->img->height, conn->pix_fmt, \
+			conn->img->width, conn->img->height, ost->frame->format, \
+			0, NULL, NULL, NULL \
+		);
+
+	int keycode = XKeysymToKeycode(conn->dpy, XStringToKeysym("x"));
+	XGrabKey(conn->dpy, keycode, Mod4Mask | ShiftMask, conn->root, True, GrabModeAsync, GrabModeAsync);
+	XSelectInput(conn->dpy, conn->root, KeyPressMask);
+
+	XEvent ev;
+	for (;;) {
+		capture_screenshot(conn);
+		if (XPending(conn->dpy)) {
+			XNextEvent(conn->dpy, &ev);
+			if (ev.type == KeyPress) {
+				break;
+			}
+		}
+		ximage_to_frame(sws_ctx, conn->img, ost->frame);
+		usleep(26 * 1000);
+		ost_encode_frame(ost);
+	}
+
+	sws_freeContext(sws_ctx);
+
+	ost_free(ost);
+}
+
 int
 main (int argc, char *argv[]) {
 	x_conn_t *conn = make_x_conn(NULL, 0);
@@ -193,13 +245,17 @@ main (int argc, char *argv[]) {
 		}
 	}
 
+	// lazy way to make width and height even
+	rect.x1 &= ~1;
+	rect.x2 &= ~1;
+	rect.y1 &= ~1;
+	rect.y2 &= ~1;
 	printf("Rectangle: (%d %d %d %d)\nWindow: %ld", rect.x1, rect.y1, rect.x2, rect.y2, conn->win);
 
 	x_conn_init_ximage(conn, &rect);
 
 	if (record == True) {
-		x_conn_free(conn);
-		printe("Not yet implemented");
+		just_record(conn, filename);
 	}else {
 		just_screenshot(conn, filename);
 	}
