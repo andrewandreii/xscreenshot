@@ -1,4 +1,4 @@
-#include "utils.h"
+#include "definitions.h"
 
 png_context_t *
 make_png_context (void) {
