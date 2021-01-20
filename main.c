@@ -161,7 +161,7 @@ just_screenshot (x_conn_t *conn, char *filename) {
 	fclose(f);
 }
 
-#define TIME_TO_WAIT CLOCKS_PER_SEC * (26 / 1000)
+#define TIME_TO_WAIT CLOCKS_PER_SEC * 0.1
 void
 just_record (x_conn_t *conn, char *filename) {
 	// allocate an output stream
@@ -181,20 +181,23 @@ just_record (x_conn_t *conn, char *filename) {
 	XSelectInput(conn->dpy, conn->root, KeyPressMask);
 
 	XEvent ev;
-	int time = clock();
+	double time;
+	double wait_time;
 	for (;;) {
 		time = clock();
-		capture_screenshot(conn);
 		if (XPending(conn->dpy)) {
 			XNextEvent(conn->dpy, &ev);
 			if (ev.type == KeyPress) {
 				break;
 			}
 		}
+		capture_screenshot(conn);
 		ximage_to_frame(sws_ctx, conn->img, ost->frame);
 		ost_encode_frame(ost);
-		while ((clock() - time) < TIME_TO_WAIT);
+		wait_time = (50 - (clock() - time) / CLOCKS_PER_SEC * 1000);
+		if (wait_time > 0) usleep(wait_time * 1000);
 	}
+	printf("Frame count: %d", ost->frame_pts);
 
 	sws_freeContext(sws_ctx);
 

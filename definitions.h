@@ -3,6 +3,8 @@
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
 #include <libswscale/swscale.h>
+#include <sys/ipc.h>
+#include <sys/shm.h>
 #include <unistd.h>
 #include "main.h"
 
@@ -23,15 +25,17 @@ typedef struct {
 	rect_t area;
 
 	int pix_fmt;
+
+	XShmSegmentInfo shminfo;
 } x_conn_t;
 
 x_conn_t *make_x_conn(_Xconst char *dpy_name, Window win);
 void x_conn_init_ximage(x_conn_t *conn, rect_t *rect);
 #define capture_screenshot(conn) \
-	XGetSubImage( \
-			conn->dpy, conn->win, conn->area.x1, \
-			conn->area.y1, rect_width(conn->area), rect_height(conn->area), \
-			AllPlanes, ZPixmap, conn->img, 0, 0 \
+	XShmGetImage( \
+			conn->dpy, conn->win, conn->img, \
+			conn->area.x1, conn->area.y1, \
+			AllPlanes \
 		);
 /* void capture_screenshot(x_conn_t *conn); // x_conn_init_ximage must be called first */
 void x_conn_free(x_conn_t *conn);

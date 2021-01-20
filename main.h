@@ -8,6 +8,7 @@
 /* #include <X11/Xlib.h> */ // already incldued by Xutil.h
 #include <X11/cursorfont.h>
 #include <X11/Xutil.h>
+#include <X11/extensions/XShm.h>
 
 #include <png.h>
 
