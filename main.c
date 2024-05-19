@@ -153,6 +153,7 @@ just_screenshot (x_conn_t *conn, char *filename) {
 	FILE *f = fopen(filename, "wb");
 	checknull(f, "Cannot open file in wb mode");
 
+	capture_screenshot(conn);
 	png_write_to_file(conn->img, f, ctx);
 
 	// cleanup
@@ -237,7 +238,7 @@ main (int argc, char *argv[]) {
 		} else if (strcmp(argv[i], "--with-border") == 0) {
 			border = True;
 		} else if (strcmp(argv[i], "--record") == 0 || strcmp(argv[i], "-r") == 0) {
-			record = True;
+			/* record = True; */
 		} else if (i + 1 >= argc) {
 			filename = argv[i];
 		} else if (strcmp(argv[i], "--") == 0) {

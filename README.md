@@ -1,6 +1,10 @@
 ## xscreenshot
 
-### Libraries
+Small utility to take screenshots with X.
+
+Recording doesn't work yet.
+
+### Libraries needed to build
 1. libX11
 2. libpng
 3. libav(format/util/codec)
